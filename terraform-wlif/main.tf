@@ -1,20 +1,17 @@
-resource "google_iam_workload_identity_pool" "gh_pool" {
-  project                   = var.project_id
-  provider                  = google-beta
-  workload_identity_pool_id = "gh-pool"
+# Create a Workload Identity Pool and Workload Identity Provider in that pool
+module "workload_identity_pool" {
+  source       = "./modules/gcp-wilf"
+  project_id   =  var.project_id
+  wilf_id      = var.wilf_id
+  wilf_provider_id = var.wilf_provider_id
 }
 
-resource "google_iam_workload_identity_pool_provider" "provider" {
-  provider                           = google-beta
-  project                            = var.project_id
-  workload_identity_pool_id          = google_iam_workload_identity_pool.gh_pool.workload_identity_pool_id
-  workload_identity_pool_provider_id = "gh-provider"
-  attribute_mapping                  = {
-    "google.subject" = "assertion.sub"
-    "attribute.full" = "assertion.repository+assertion.ref"
-  }
-  oidc {
-    allowed_audiences = ["google-wlif"]
-    issuer_uri        = "https://token.actions.githubusercontent.com"
-  }
+# SA: Workload indtity pool binding for Service account
+module "workload_idetify-sa-binding" {
+  source       = "./modules/wlif-sa-binding"
+  project_id   =  var.project_id
+  gh_repo      = var.repo
+  sa_id        = var.sa_account
+  poolid       = var.wilf_id
+  depends_on   = [module.workload_identity_pool]
 }
